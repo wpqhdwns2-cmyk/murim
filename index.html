@@ -434,6 +434,18 @@ body::before{background:transparent}
 .sk.locked .skh b{color:var(--muted)}
 .sk.locked .ske,.sk.locked .ske span{color:var(--muted)}
 .sk.locked .pips{opacity:.55}
+.skm{margin:6px 0 2px;padding:7px 9px 8px;background:var(--shade);border-left:2px solid var(--goldtext)}
+.skmh{display:flex;align-items:center;gap:9px}
+.skmh b{font-size:12.5px;font-weight:600;color:var(--goldtext);white-space:nowrap}
+.skmbar{flex:1;height:4px;background:var(--hair);position:relative;overflow:hidden}
+.skmbar i{position:absolute;left:0;top:0;bottom:0;background:var(--goldtext)}
+.skm p{font-size:12.5px;line-height:1.5;margin:4px 0 0;color:var(--ink)}
+.skm p.skmn{font-size:11px;color:var(--muted);margin-top:2px}
+.ledger .lv small{display:block;font-size:11.5px;line-height:1.45;color:var(--muted);margin-top:1px;white-space:normal}
+.ledger .lv span:has(small){flex-basis:100%;white-space:normal}
+.masrows span{display:block;font-size:12.5px;color:var(--muted);line-height:1.5}
+.masrows span+span{margin-top:5px}
+.masrows b{display:block;font-size:14px;font-weight:400;color:var(--ink)}
 /* 붉은 낙관색·금색을 글씨로 쓸 때 */
 .kicker,.prose p.sfx,.card .grp{color:var(--sealtext)}
 .st.warn,.side .rk em,.blog p.sfx{color:var(--goldtext)}
@@ -776,7 +788,7 @@ function showNotes(force,to){if(!notes.length&&!force)return;
   if(cards){const cw=document.createElement('div');cw.className='itcards';cw.innerHTML=cards;(to||story).append(cw);}
   /* 같은 수치는 한 줄로 합친다: 한 화면에서 같은 것을 얻고 잃는 일이 겹쳐 보이지 않게 */
   const net=new Map();notes.forEach(([k,v,u])=>{if(typeof v==='number'){const o=net.get(k)||{v:0,u};o.v+=v;net.set(k,o);}});
-  net.forEach(({v,u},k)=>{if(v)(v<0?loss:gain).push(`${k} ${v>0?'+':''}${v}${u||''}`);});
+  net.forEach(({v,u},k)=>{if(v)(v<0?loss:gain).push(`${k} ${v>0?'+':''}${v}${u||''}${v>0?masTail(k):''}`);});
   notes.forEach(([k,v])=>{if(typeof v==='number')return;if(/낫지 않다/.test(v))etc.push(`${k} · ${v}`);else gain.push(`${k} · ${v}`);});
   const w=document.createElement('div');w.className='ledger';
   let h='<div class="lh">얻은 것과 잃은 것</div>';
@@ -18659,6 +18671,18 @@ const SKEFF={
   gsim:L=>`운기 내공 ${pc(15*L)}`,
   up:L=>'다음 지역에서 열린다'};
 const effText=(k,L)=>L<=0?'아직 익히지 않았다':SKEFF[k](L);
+/* 숙련: 기술 점수와 따로, 사건에서 몸으로 익혀 쌓는 수치. 안에서는 1~12로 세고 화면에는 0~11로 보인다(숙련 1마다 효과 한 칸).
+   무공 숙련 1 = 대결 피해 +2%, 보법 숙련 1 = 회피 확률과 피하는 상대를 맞힐 확률 +1.5%p, 심법 숙련 1 = 얻는 내공 +4% */
+const MAS_MAX=11;
+const masV=k=>Math.max(0,((s&&s[k])||1)-1);
+const masName=k=>k==='sim'?fac().sim:k==='bo'?fac().bo:fac().mu(s.weapon);
+const masNum=x=>+(x).toFixed(1);
+const MAS_PER={mu:'대결에서 주는 피해 +2%',bo:'회피 확률 +1.5%p, 피하는 상대를 맞힐 확률 +1.5%p',sim:'얻는 내공 +4%'};
+function masEff(k){const n=masV(k);if(!n)return '아직 없음';
+  return k==='mu'?`대결에서 주는 피해 +${n*2}%`:k==='bo'?`대결에서 회피 확률 +${masNum(n*1.5)}%p · 피하는 상대를 맞힐 확률 +${masNum(n*1.5)}%p`:`내공을 얻을 때마다 +${n*4}%`;}
+/* 얻은 것과 잃은 것에 숙련이 오르면 지금 숙련과 효과를 덧붙인다 */
+function masTail(label){if(!s||!s.fac)return '';for(const k of ['mu','bo','sim'])if(label===masName(k)+' 숙련')return `<small>지금 숙련 ${masV(k)}/${MAS_MAX} · ${masEff(k)}</small>`;return '';}
+function masBlock(k){const v=masV(k);return `<div class="skm"><div class="skmh"><b>숙련 ${v} / ${MAS_MAX}</b><span class="skmbar"><i style="width:${Math.round(v/MAS_MAX*100)}%"></i></span></div><p>숙련 효과 · ${masEff(k)}</p><p class="skmn">사건에서 몸으로 익히면 오른다(기술 점수와 무관) · 숙련 1마다 ${MAS_PER[k]}</p></div>`;}
 /* 문파별 상급·초상급 (지금은 비급을 얻을 수 없다: 다음 지역에서) */
 const SKUP={
   소림:[{id:'u1',n:'백보신권',k:'up',tier:2,pre:[['mid_atk',4]],d:'백 걸음 밖까지 주먹의 기운이 닿는다.'},{id:'u2',n:'금강부동신법',k:'up',tier:2,pre:[['mid_def',4],['sim',4]],d:'산처럼 서서 받아 낸다.'},{id:'u3',n:'일위도강',k:'up',tier:2,pre:[['mid_eva',4]],d:'갈대 한 줄기를 밟고 강을 건넌다.'},{id:'u4',n:'역근경',k:'up',tier:3,pre:[['sim',5],['u2',3]],d:'근골을 바꾸는 소림의 지극한 심법.'}],
@@ -18737,14 +18761,15 @@ function openSkills(focus){if(!s||!s.fac)return;ensureSk();const box=$('#sheetBo
       <div class="skh"><span class="skt">${typ}</span><b></b><span class="skl">${LV[L]}</span></div>
       <div class="pips">${pips}</div>
       <p class="skd">${n.d}</p>
-      ${n.k==='up'?'':`<p class="ske">${eNow}${eNext?`<br><span>${LV[L+1]} · ${eNext}</span>`:''}</p>`}
+      ${n.k==='up'?'':`<p class="ske">단계 효과 · ${eNow}${eNext?`<br><span>다음 단계(${LV[L+1]}) · ${eNext}</span>`:''}</p>`}
+      ${['sim','bo','mu'].includes(n.id)?masBlock(n.id):''}
       ${n.pre.length?`<p class="skp">선행 · ${n.pre.map(([id,lv])=>{const p=all.find(x=>x.id===id);return `<span class="${skL(id)>=lv?'ok':''}">${p?p.n:id} ${LV[lv]}</span>`;}).join(' ')}</p>`:''}
       ${nx?`<p class="skn">${nx}</p>`:''}
       ${L>=5?'<div class="skbtn done">극(極)</div>':ok?`<button class="skbtn" type="button" data-up="${n.id}">${L?`${ro(LV[L+1])} 수련`:'익힌다'} · 점수 ${c}</button>`:`<div class="skbtn no">${why}</div>`}
     </div>`;};
   box.innerHTML=`<div class="grab"></div><h3>기술(技術)</h3><div class="sub">${fac().name} · ${rName()} · 경지나 단계가 오를 때마다 기술 점수 ${SP_PER_STEP}</div>
     <div class="sphead"><span>남은 기술 점수</span><b>${s.sp}</b></div>
-    <p class="sklegend">단계 · 초입 → 중기 → 후기 → 완숙 → 극 · 점수 1 · 1 · 2 · 2 · 3</p>${GYSET[s.fac]?'<p class="sklegend">사파 문파의 무공은 얕다 · 단계 효과가 정파의 7할이고, 위력·회피·내공도 조금 낮게 시작한다 · 모자란 몫은 문파 밖에서 얻는 기연으로 채워야 한다</p>':''}
+    <p class="sklegend">단계 · 기술 점수로 올린다 · 초입 → 중기 → 후기 → 완숙 → 극 · 점수 1 · 1 · 2 · 2 · 3</p><p class="sklegend">숙련 · 기술 점수와 따로, 사건에서 몸으로 익히면 오른다(0~${MAS_MAX}) · 기초 심법·보법·무공 칸에 지금 숙련과 효과가 나온다 · 단계 효과와 숙련 효과는 함께 적용된다</p>${GYSET[s.fac]?'<p class="sklegend">사파 문파의 무공은 얕다 · 단계 효과가 정파의 7할이고, 위력·회피·내공도 조금 낮게 시작한다 · 모자란 몫은 문파 밖에서 얻는 기연으로 채워야 한다</p>':''}
     ${byTier.map((ns,t)=>ns.length?`<h4>${TIER[t]} · ${REALMS[TIER_REALM[t]]}부터</h4><div class="sknodes">${ns.map(card).join('')}</div>${t<3&&byTier[t+1].length?'<div class="skarrow" aria-hidden="true"></div>':''}`:'').join('')}
     ${all.some(n=>n.gy)?`<h4>기연(奇緣) · 문파의 계보 밖에서 얻은 상급 비급</h4><div class="sknodes">${all.filter(n=>n.gy).map(card).join('')}</div>`:''}
     <div class="sbtns"><button class="sbtn" id="bClose" type="button">닫기</button></div>`;
@@ -18758,7 +18783,7 @@ function openSheet(){if(!s||!s.fac)return;ensureSk();const box=$('#sheetBox');co
   const coldT=['없음','한기','고뿔','중고뿔'][s.cold],hunT=['없음','허기짐','굶주림'][s.hunger];
   box.innerHTML=`<div class="grab"></div><h3>행장(行裝)</h3><div class="sub">${f.name} · ${s.weapon} · ${rName()}</div>
   <h4>경지와 내공</h4><dl class="rows"><dt>경지</dt><dd>${rName()}${nextReq()?` → ${s.realm<2?REALMS[s.realm+1]:rName(s.realm,s.stage+1)} (내공 ${nextReq().ng}, 깨달음 ${nextReq().ins} 필요)`:' · 다음 경지의 벽은 하남을 떠난 뒤'}</dd><dt>내공</dt><dd>${s.ng}</dd><dt>깨달음</dt><dd>${s.ins}</dd><dt>명성</dt><dd>${s.fame}</dd></dl>
-  <h4>기술</h4><dl class="rows">${skList().filter(n=>skL(n.id)>0).map(n=>`<dt>${({sim:'심법',msim:'심법',bo:'보법',eva:'보법'})[n.k]||'무공'}</dt><dd>${n.n} ${LV[skL(n.id)]}</dd>`).join('')}<dt>점수</dt><dd>${s.sp} 남음 · <button class="linkbtn" id="bSk" type="button">기술 창 열기</button></dd><dt>숙련</dt><dd>${f.sim} ${s.sim} · ${f.bo} ${s.bo} · ${f.mu(s.weapon)} ${s.mu}</dd><dt>중급</dt><dd>${s.mid?s.mid.n+(midL()?'':' (아직 익히지 않음)'):'일류에 오르면 고를 수 있다'}</dd>${(s.gy||[]).length?`<dt>기연</dt><dd>${s.gy.map(id=>fn(GYK[id].n)).join(' · ')}</dd>`:''}${has('취팔선보단편')?'<dt>기연</dt><dd>취팔선보 기초 단편</dd>':''}${has('야행보단편')?'<dt>기연</dt><dd>야행보 기초 단편</dd>':''}</dl>
+  <h4>기술</h4><dl class="rows">${skList().filter(n=>skL(n.id)>0).map(n=>`<dt>${({sim:'심법',msim:'심법',bo:'보법',eva:'보법'})[n.k]||'무공'}</dt><dd>${n.n} ${LV[skL(n.id)]}</dd>`).join('')}<dt>점수</dt><dd>${s.sp} 남음 · <button class="linkbtn" id="bSk" type="button">기술 창 열기</button></dd><dt>숙련</dt><dd class="masrows">${['mu','bo','sim'].map(k=>`<span><b>${masName(k)} ${masV(k)}/${MAS_MAX}</b> ${masEff(k)}</span>`).join('')}</dd><dt>중급</dt><dd>${s.mid?s.mid.n+(midL()?'':' (아직 익히지 않음)'):'일류에 오르면 고를 수 있다'}</dd>${(s.gy||[]).length?`<dt>기연</dt><dd>${s.gy.map(id=>fn(GYK[id].n)).join(' · ')}</dd>`:''}${has('취팔선보단편')?'<dt>기연</dt><dd>취팔선보 기초 단편</dd>':''}${has('야행보단편')?'<dt>기연</dt><dd>야행보 기초 단편</dd>':''}</dl>
   <h4>장비</h4>${(()=>{const c=[[s.gname.w,'兵'],[s.gname.a,'甲'],[s.gear.c?s.gname.c:'','飾'],[s.mid&&s.mid.n,'書']].map(([n,l])=>itemCard(n,l)).join('');return c?`<div class="itcards sm">${c}</div>`:'';})()}<dl class="rows"><dt>병기</dt><dd>${GRADES[s.gear.w]} · ${s.gname.w}</dd><dt>방어구</dt><dd>${GRADES[s.gear.a]} · ${s.gname.a}</dd><dt>장신구</dt><dd>${s.gear.c?GRADES[s.gear.c]+' · '+s.gname.c:'없음'}</dd></dl>
   <h4>소지품과 몸</h4><dl class="rows"><dt>은자</dt><dd>${s.silver}</dd><dt>건량</dt><dd>${s.ration}</dd><dt>허기</dt><dd>${hunT}</dd><dt>고뿔</dt><dd>${coldT}${s.coldStreak?` · 노숙 ${s.coldStreak}일 연속`:''}</dd><dt>신의의 침</dt><dd>${s.adUsed?'이미 썼다':'한 번 남았다'}</dd></dl>
   <h4>${reg().name} 진행</h4><dl class="rows"><dt>체류</dt><dd>${s.day}일</dd><dt>겪은 사건</dt><dd>${s.count}/${NEED_EV}개 (30개 + 일류 + 암천이면 졸업)</dd></dl>
